@@ -6,6 +6,8 @@
 	<string>MenuStats</string>
 	<key>CFBundleExecutable</key>
 	<string>MenuStats</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.stephanevdb.MenuStats</string>
 	<key>CFBundleName</key>

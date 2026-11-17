@@ -9,6 +9,15 @@ enum DebugSnapshot {
         let args = CommandLine.arguments
         guard let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count else { return }
         let dir = URL(fileURLWithPath: args[i + 1])
+        if args.contains("--icon") {
+            let renderer = ImageRenderer(content: AppIconArt())
+            renderer.scale = 1
+            if let cg = renderer.cgImage,
+               let data = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) {
+                try? data.write(to: dir.appendingPathComponent("AppIcon-1024.png"))
+            }
+            exit(0)
+        }
         if args.contains("--dump-system-data") {
             let scanner = SystemDataScanner()
             scanner.scan()
