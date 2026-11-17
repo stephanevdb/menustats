@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>MenuStats</string>
+	<key>CFBundleExecutable</key>
+	<string>MenuStats</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.stephanevdb.MenuStats</string>
+	<key>CFBundleName</key>
+	<string>MenuStats</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSLocationUsageDescription</key>
+	<string>MenuStats uses your location permission only to read the name of the Wi‑Fi network you are connected to.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>MenuStats uses your location permission only to read the name of the Wi‑Fi network you are connected to.</string>
+</dict>
+</plist>
