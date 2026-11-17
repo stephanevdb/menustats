@@ -7,15 +7,14 @@ cask "menustats" do
   desc "Compact system stats in the menu bar"
   homepage "https://github.com/stephanevdb/menustats"
 
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   app "MenuStats.app"
 
   # The app is self-signed rather than notarized, so clear the download quarantine
   # or Gatekeeper refuses to open it.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/MenuStats.app"]
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{appdir}}/MenuStats.app"]
   end
 
   uninstall quit: "com.stephanevdb.MenuStats"

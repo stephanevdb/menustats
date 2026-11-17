@@ -14,8 +14,11 @@ Requires macOS 14 (Sonoma) or later. Runs on Apple silicon and Intel; some stats
 
 ```bash
 brew tap stephanevdb/menustats https://github.com/stephanevdb/menustats
+brew trust stephanevdb/menustats
 brew install --cask menustats
 ```
+
+`brew trust` is needed once on recent Homebrew versions, which only load casks from taps you've approved.
 
 MenuStats is self-signed rather than notarized by Apple; the Homebrew cask clears the download quarantine so it opens normally.
 
