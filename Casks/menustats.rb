@@ -1,6 +1,6 @@
 cask "menustats" do
-  version "1.0.1"
-  sha256 "429cda0e310a8b887e70970d957483d030163ba9935451745440cc9519cd5ff5"
+  version "1.0.2"
+  sha256 "776440375a27eb938ac0eb0fed1590aff2df895ce73fc8320ddda036c713c554"
 
   url "https://github.com/stephanevdb/menustats/releases/download/v#{version}/MenuStats-#{version}.zip"
   name "MenuStats"
