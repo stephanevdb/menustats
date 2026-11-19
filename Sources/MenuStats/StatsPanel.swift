@@ -12,6 +12,7 @@ enum Tab: String, CaseIterable {
 
 struct StatsPanel: View {
     @ObservedObject var monitor: SystemMonitor
+    @ObservedObject private var updater = Updater.shared
     @State private var tab = Tab.overview
     /// Overview's size, which the other tabs adopt so the panel doesn't jump when switching.
     @State private var overviewSize: CGSize = .zero
@@ -53,6 +54,26 @@ struct StatsPanel: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            if let version = updater.availableVersion {
+                Button { updater.update() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text("Update to \(version)")
+                    }
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.accentColor))
+                }
+                .buttonStyle(.plain)
+                .help(Updater.brew == nil ? "Opens the download page" : "Installs with Homebrew, then reopens MenuStats")
+            } else if updater.state == .updating {
+                HStack(spacing: 4) {
+                    ProgressView().controlSize(.mini)
+                    Text("Updating…").font(.system(size: 10, weight: .semibold))
+                }
+            }
             if !monitor.alerts.isEmpty {
                 Pill(text: "\(monitor.alerts.count) alert\(monitor.alerts.count == 1 ? "" : "s")", color: .red)
             }
@@ -546,6 +567,10 @@ struct SettingsTab: View {
             KeepRunningSettings()
                 .padding(10)
                 .background(CardBackground())
+
+            UpdateSettings()
+                .padding(10)
+                .background(CardBackground())
         }
     }
 }
@@ -764,5 +789,66 @@ struct SpeedTestRow: View {
             }
         }
         .font(.system(size: 11))
+    }
+}
+
+struct UpdateSettings: View {
+    @ObservedObject private var updater = Updater.shared
+    @AppStorage(UpdateKey.checkAutomatically) private var checkAutomatically = true
+    @AppStorage(UpdateKey.installAutomatically) private var installAutomatically = false
+
+    private var installedWithHomebrew: Bool { Updater.brew != nil }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionTitle("Updates")
+            SwitchRow(title: "Check for updates automatically", isOn: $checkAutomatically)
+            SwitchRow(title: "Install updates automatically", isOn: $installAutomatically)
+                .disabled(!checkAutomatically || !installedWithHomebrew)
+            HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Version \(updater.currentVersion)").font(.system(size: 11, weight: .medium))
+                    Text(status)
+                        .font(.system(size: 10))
+                        .foregroundStyle(isFailure ? Color.orange : Color.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 4)
+                switch updater.state {
+                case .checking, .updating:
+                    ProgressView().controlSize(.small)
+                case .available(let version):
+                    Button("Update to \(version)") { updater.update() }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                default:
+                    Button("Check now") { Task { await updater.check() } }
+                        .controlSize(.small)
+                }
+            }
+            Text(installedWithHomebrew
+                 ? "Updates install with Homebrew and MenuStats reopens by itself."
+                 : "Not installed with Homebrew, so updating opens the download page.")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var isFailure: Bool {
+        if case .failed = updater.state { return true }
+        return false
+    }
+
+    private var status: String {
+        switch updater.state {
+        case .idle: updater.lastChecked == nil ? "Not checked yet" : "Up to date"
+        case .checking: "Checking…"
+        case .upToDate: "Up to date" + (updater.lastChecked.map { ", checked \($0.formatted(date: .omitted, time: .shortened))" } ?? "")
+        case .available(let version): "Version \(version) is available"
+        case .updating: "Installing with Homebrew…"
+        case .failed(let reason): reason
+        }
     }
 }

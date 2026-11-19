@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
             controller = StatusItemController(monitor: SystemMonitor())
+            Updater.shared.start()
         }
     }
 }

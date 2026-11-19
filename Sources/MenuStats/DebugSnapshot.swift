@@ -9,6 +9,17 @@ enum DebugSnapshot {
         let args = CommandLine.arguments
         guard let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count else { return }
         let dir = URL(fileURLWithPath: args[i + 1])
+        if args.contains("--check-update") {
+            for (a, b) in [("1.0.10", "1.0.9"), ("1.0.1", "1.0.1"), ("1.1", "1.0.9"), ("1.0.0", "1.0.1")] {
+                print("isNewer(\(a), than: \(b)) =", Updater.isNewer(a, than: b))
+            }
+            Task {
+                await Updater.shared.check()
+                print("current:", Updater.shared.currentVersion, "state:", Updater.shared.state)
+                exit(0)
+            }
+            RunLoop.main.run()
+        }
         if args.contains("--icon") {
             let renderer = ImageRenderer(content: AppIconArt())
             renderer.scale = 1

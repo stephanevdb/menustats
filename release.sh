@@ -5,6 +5,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 VERSION="${1:?usage: ./release.sh <version>}"
+# Keep the project's Info.plist on the released version, so local builds don't offer themselves an update.
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Resources/Info.plist
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" Resources/Info.plist
 swift build -c release --arch arm64 --arch x86_64
 BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/MenuStats"
 
