@@ -102,22 +102,28 @@ final class Updater: ObservableObject {
             return
         }
         state = .updating
-        // Runs detached: the cask's `uninstall quit:` stops this app during the upgrade, then
-        // the script reopens it. Auto-remove stays off so the upgrade can't uninstall other
-        // packages, and the log shows what happened if it fails.
+        // Homebrew won't quit an app it's running inside, so it replaces the app on disk and
+        // this script then restarts it: stop the old process, wait for it to exit, open the new
+        // copy. Auto-remove stays off so the upgrade can't uninstall other packages, and the
+        // log shows what happened if it fails.
         let appPath = Bundle.main.bundlePath
         let script = """
         {
           "$0" update --quiet
           HOMEBREW_NO_AUTOREMOVE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 "$0" upgrade --cask menustats
           status=$?
-          /usr/bin/open "$1"
+          if [ $status -eq 0 ]; then
+            kill "$3" 2>/dev/null
+            while kill -0 "$3" 2>/dev/null; do sleep 0.2; done
+            /usr/bin/open "$1"
+          fi
           exit $status
         } > "$2" 2>&1
         """
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = ["-c", script, brew, appPath, Self.logURL.path]
+        process.arguments = ["-c", script, brew, appPath, Self.logURL.path,
+                             String(ProcessInfo.processInfo.processIdentifier)]
         do {
             try process.run()
         } catch {
