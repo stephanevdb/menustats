@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct MenuStatsApp: App {
-    @StateObject private var monitor = SystemMonitor()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
         #if DEBUG
@@ -10,12 +10,18 @@ struct MenuStatsApp: App {
         #endif
     }
 
+    // The menu bar item and panel are managed by StatusItemController; SwiftUI needs a scene.
     var body: some Scene {
-        MenuBarExtra {
-            StatsPanel(monitor: monitor)
-        } label: {
-            MenuBarLabel(state: monitor.bar)
+        Settings { EmptyView() }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var controller: StatusItemController?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        MainActor.assumeIsolated {
+            controller = StatusItemController(monitor: SystemMonitor())
         }
-        .menuBarExtraStyle(.window)
     }
 }

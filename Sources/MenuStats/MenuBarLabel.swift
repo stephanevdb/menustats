@@ -38,48 +38,33 @@ struct BarItems {
     var isEmpty: Bool { !(cpu || memory || network || disk || gpu || temperature || power) }
 }
 
-/// The status item. SwiftUI flattens custom layouts in MenuBarExtra labels,
-/// so the compact view is rendered to a template image instead.
-struct MenuBarLabel: View {
-    @ObservedObject var state: MenuBarState
-    @AppStorage(BarKey.cpu) private var showCPU = true
-    @AppStorage(BarKey.memory) private var showMemory = true
-    @AppStorage(BarKey.network) private var showNetwork = false
-    @AppStorage(BarKey.disk) private var showDisk = false
-    @AppStorage(BarKey.gpu) private var showGPU = false
-    @AppStorage(BarKey.temperature) private var showTemperature = false
-    @AppStorage(BarKey.power) private var showPower = false
-    @AppStorage(BarKey.gauges) private var showGauges = true
-    @AppStorage(BarKey.style) private var style = BarStyle.classic
-    // Re-render when the units change.
-    @AppStorage(Prefs.temperatureUnitKey) private var temperatureUnit = "C"
-    @AppStorage(Prefs.networkUnitKey) private var networkUnit = "bits"
-
-    private var items: BarItems {
-        BarItems(cpu: showCPU, memory: showMemory, network: showNetwork, disk: showDisk,
-                 gpu: showGPU, temperature: showTemperature, power: showPower)
-    }
-
-    var body: some View {
-        if !items.isEmpty {
-            Image(nsImage: render())
-        } else {
-            Image(systemName: "gauge.with.dots.needle.33percent")
+/// Draws the status item's image. The compact view is rendered to a template image so it
+/// follows the menu bar's light/dark appearance.
+@MainActor
+enum MenuBarImage {
+    static func render(snapshot: Snapshot, alerts: Set<AlertKind>) -> NSImage {
+        let defaults = UserDefaults.standard
+        func flag(_ key: String, _ fallback: Bool) -> Bool {
+            defaults.object(forKey: key) as? Bool ?? fallback
         }
-    }
+        let items = BarItems(cpu: flag(BarKey.cpu, true), memory: flag(BarKey.memory, true),
+                             network: flag(BarKey.network, false), disk: flag(BarKey.disk, false),
+                             gpu: flag(BarKey.gpu, false), temperature: flag(BarKey.temperature, false),
+                             power: flag(BarKey.power, false))
+        guard !items.isEmpty else {
+            let symbol = NSImage(systemSymbolName: "gauge.with.dots.needle.33percent",
+                                 accessibilityDescription: "MenuStats") ?? NSImage()
+            symbol.isTemplate = true
+            return symbol
+        }
 
-    @MainActor
-    private func render() -> NSImage {
-        let content = CompactStats(
-            snapshot: state.snapshot,
-            style: style,
-            items: items,
-            showGauges: showGauges
-        )
+        let style = BarStyle(rawValue: defaults.string(forKey: BarKey.style) ?? "") ?? .classic
+        let content = CompactStats(snapshot: snapshot, style: style, items: items,
+                                   showGauges: flag(BarKey.gauges, true))
         let renderer = ImageRenderer(content: content)
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
         let image = renderer.nsImage ?? NSImage()
-        guard !state.alerts.isEmpty else {
+        guard !alerts.isEmpty else {
             image.isTemplate = true
             return image
         }
@@ -93,28 +78,13 @@ struct MenuBarLabel: View {
     }
 }
 
-/// MenuBarExtra has no tooltip API, so this sets it on the underlying status bar button.
+/// The monitor updates the tooltip every tick; the status item controller registers its button here.
 @MainActor
 enum StatusItemTooltip {
-    private static weak var button: NSStatusBarButton?
+    static weak var button: NSStatusBarButton?
 
     static func apply(_ text: String) {
-        if button == nil {
-            button = NSApp?.windows
-                .filter { $0.className.contains("NSStatusBarWindow") }
-                .lazy
-                .compactMap { $0.contentView.flatMap(find) }
-                .first
-        }
         button?.toolTip = text
-    }
-
-    private static func find(in view: NSView) -> NSStatusBarButton? {
-        if let button = view as? NSStatusBarButton { return button }
-        for subview in view.subviews {
-            if let button = find(in: subview) { return button }
-        }
-        return nil
     }
 }
 
