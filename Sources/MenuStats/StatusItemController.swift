@@ -29,6 +29,9 @@ final class StatusItemController: NSObject {
                 .onGeometryChange(for: CGSize.self) { $0.size } action: { [weak self] size in
                     self?.contentSizeChanged(size)
                 }
+                // While the window catches up with a new size, keep the content pinned to the
+                // top instead of centred, so it doesn't shift for a frame.
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         ))
         // The panel follows the SwiftUI content's size, not the other way round.
         hostingView.sizingOptions = []
@@ -116,7 +119,9 @@ final class StatusItemController: NSObject {
         x = min(x, visible.maxX - edgeMargin - size.width)
         x = max(x, visible.minX + edgeMargin)
         let top = min(itemFrame.minY, visible.maxY) - gap
-        panel.setFrame(NSRect(x: x, y: top - size.height, width: size.width, height: size.height), display: true)
+        let frame = NSRect(x: x, y: top - size.height, width: size.width, height: size.height)
+        guard frame != panel.frame else { return }
+        panel.setFrame(frame, display: true, animate: false)
     }
 }
 

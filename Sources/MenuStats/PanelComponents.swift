@@ -6,20 +6,25 @@ import Charts
 struct TabBar: View {
     @Binding var selection: Tab
     @Namespace private var namespace
+    /// Drives only the sliding highlight. The selection itself changes without animation,
+    /// so the new tab's content appears at once instead of cross-fading and morphing.
+    @State private var highlighted: Tab?
 
     var body: some View {
+        let current = highlighted ?? selection
         HStack(spacing: 2) {
             ForEach(Tab.allCases, id: \.self) { tab in
                 Button {
-                    withAnimation(.snappy(duration: 0.2)) { selection = tab }
+                    selection = tab
+                    withAnimation(.snappy(duration: 0.18)) { highlighted = tab }
                 } label: {
                     Text(tab.rawValue)
                         .font(.system(size: 11, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
-                        .foregroundStyle(selection == tab ? Color.primary : Color.secondary)
+                        .foregroundStyle(current == tab ? Color.primary : Color.secondary)
                         .background {
-                            if selection == tab {
+                            if current == tab {
                                 Capsule()
                                     .fill(.background.opacity(0.9))
                                     .shadow(color: .black.opacity(0.12), radius: 1, y: 0.5)
