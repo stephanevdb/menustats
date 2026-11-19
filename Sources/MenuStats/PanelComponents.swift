@@ -389,11 +389,22 @@ struct ForceTwoColumnsKey: EnvironmentKey {
     static let defaultValue = false
 }
 
+struct IsLayoutProbeKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
 extension EnvironmentValues {
     /// Set on the other tabs when Overview needed two columns, so the panel keeps one size.
     var forceTwoColumns: Bool {
         get { self[ForceTwoColumnsKey.self] }
         set { self[ForceTwoColumnsKey.self] = newValue }
+    }
+
+    /// True inside AdaptiveColumns' invisible measuring copy. Cards skip their background
+    /// loading there, or it would run twice.
+    var isLayoutProbe: Bool {
+        get { self[IsLayoutProbeKey.self] }
+        set { self[IsLayoutProbeKey.self] = newValue }
     }
 }
 
@@ -444,6 +455,7 @@ struct AdaptiveColumns<Left: View, Right: View>: View {
         .background(alignment: .top) {
             // Invisible single-column copy, measured to decide whether one column fits.
             VStack(spacing: 8) { left; right }
+                .environment(\.isLayoutProbe, true)
                 .frame(width: Self.columnWidth)
                 .fixedSize(horizontal: false, vertical: true)
                 .hidden()

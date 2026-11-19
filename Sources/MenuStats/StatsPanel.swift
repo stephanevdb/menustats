@@ -1,5 +1,6 @@
 
 import SwiftUI
+import SystemConfiguration
 import Charts
 import ServiceManagement
 
@@ -18,6 +19,9 @@ struct StatsPanel: View {
     @State private var overviewSize: CGSize = .zero
 
     private var s: Snapshot { monitor.snapshot }
+
+    /// Host.current() can stall on a slow DNS lookup; the configured name is instant.
+    private static let computerName = (SCDynamicStoreCopyComputerName(nil, nil) as String?) ?? "This Mac"
 
     var body: some View {
         VStack(spacing: 10) {
@@ -47,7 +51,7 @@ struct StatsPanel: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(Host.current().localizedName ?? "This Mac")
+                Text(Self.computerName)
                     .font(.system(size: 14, weight: .semibold))
                 Text("Up \(Fmt.duration(s.uptime))")
                     .font(.system(size: 11))

@@ -181,7 +181,9 @@ extension Cleanup {
                                       symbol: "shippingbox", url: url, action: action))
         }
         if let brew = tool("brew") {
-            add("brew", "Homebrew", caches.appendingPathComponent("Homebrew"), .runCommand([brew, "cleanup", "--prune=all", "-s"]))
+            // brew cleanup also auto-removes unused packages unless told not to.
+            add("brew", "Homebrew", caches.appendingPathComponent("Homebrew"),
+                .runCommand(["/usr/bin/env", "HOMEBREW_NO_AUTOREMOVE=1", brew, "cleanup", "--prune=all", "-s"]))
         }
         add("npm", "npm", home.appendingPathComponent(".npm/_cacache"))
         if let pnpm = tool("pnpm") {

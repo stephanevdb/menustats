@@ -5,6 +5,7 @@ enum UpdateKey {
     static let checkAutomatically = "updates.checkAutomatically"
     static let installAutomatically = "updates.installAutomatically"
     static let notifiedVersion = "updates.notifiedVersion"
+    static let autoInstalledVersion = "updates.autoInstalledVersion"
 }
 
 /// Checks GitHub for a newer release and installs it through Homebrew when MenuStats was
@@ -76,7 +77,12 @@ final class Updater: ObservableObject {
         }
         state = .available(latest)
         if !userInitiated {
-            if installAutomatically && Self.brew != nil {
+            // One automatic attempt per version: if Homebrew can't see it yet (e.g. its tap
+            // isn't updated), installing again on every check would restart the app in a loop.
+            let defaults = UserDefaults.standard
+            if installAutomatically && Self.brew != nil
+                && defaults.string(forKey: UpdateKey.autoInstalledVersion) != latest {
+                defaults.set(latest, forKey: UpdateKey.autoInstalledVersion)
                 update()
             } else {
                 notifyOnce(about: latest)
@@ -112,7 +118,11 @@ final class Updater: ObservableObject {
           "$0" update --quiet
           HOMEBREW_NO_AUTOREMOVE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 "$0" upgrade --cask menustats
           status=$?
-          if [ $status -eq 0 ]; then
+          new=$(/usr/bin/defaults read "$1/Contents/Info" CFBundleShortVersionString 2>/dev/null)
+          echo "Installed version: $new (was $4)"
+          # Restart only if a different version is now installed; `brew upgrade` also exits 0
+          # when there was nothing to upgrade.
+          if [ $status -eq 0 ] && [ -n "$new" ] && [ "$new" != "$4" ]; then
             kill "$3" 2>/dev/null
             while kill -0 "$3" 2>/dev/null; do sleep 0.2; done
             /usr/bin/open "$1"
@@ -123,17 +133,21 @@ final class Updater: ObservableObject {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = ["-c", script, brew, appPath, Self.logURL.path,
-                             String(ProcessInfo.processInfo.processIdentifier)]
+                             String(ProcessInfo.processInfo.processIdentifier), currentVersion]
         do {
             try process.run()
         } catch {
             state = .failed("Couldn't start Homebrew")
             return
         }
-        // If the app is still running after a few minutes, the upgrade didn't go through.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 300) { [weak self] in
-            guard let self, self.state == .updating else { return }
-            self.state = .failed("Update didn't finish, see ~/Library/Logs/MenuStats-update.log")
+        // The script restarts the app on success, so still running means it didn't go through.
+        process.terminationHandler = { _ in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard Updater.shared.state == .updating else { return }
+                    Updater.shared.state = .failed("Update didn't install, see ~/Library/Logs/MenuStats-update.log")
+                }
+            }
         }
     }
 

@@ -286,13 +286,17 @@ final class SystemMonitor: ObservableObject {
         var details = network
         NetworkInfo.wifi(into: &details)
         details.interfaces = NetworkInfo.interfaces()
+        // A new network or VPN usually means a new public IP, so look it up again right away.
+        if details.interfaces != network.interfaces { lastPublicIP = .distantPast }
         if details != network { network = details }
 
         if Date().timeIntervalSince(lastPing) > 10 {
             lastPing = Date()
             Task { network.pingMs = await NetworkInfo.ping() }
         }
-        if Date().timeIntervalSince(lastPublicIP) > 300 || network.publicIP == nil {
+        // Every 5 minutes, or every 30 s while it's unknown (e.g. offline), never every tick.
+        let publicIPAge = Date().timeIntervalSince(lastPublicIP)
+        if publicIPAge > 300 || (network.publicIP == nil && publicIPAge > 30) {
             lastPublicIP = Date()
             Task {
                 if let ip = await NetworkInfo.publicIP() { network.publicIP = ip }

@@ -157,6 +157,7 @@ struct CleanupRow: View {
 
 struct DockerCleanupCard: View {
     @ObservedObject var monitor: SystemMonitor
+    @Environment(\.isLayoutProbe) private var isLayoutProbe
     @State private var usage: [DockerDiskUsage]?
     @State private var loading = true
     @State private var busy: Set<String> = []
@@ -202,7 +203,10 @@ struct DockerCleanupCard: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .task { await load() }
+        .task {
+            guard !isLayoutProbe else { return }
+            await load()
+        }
     }
 
     private func load() async {
@@ -214,6 +218,7 @@ struct DockerCleanupCard: View {
 
 struct UnusedAppsCard: View {
     @ObservedObject var monitor: SystemMonitor
+    @Environment(\.isLayoutProbe) private var isLayoutProbe
     @AppStorage(Prefs.unusedAppDaysKey) private var days = 90
     @State private var apps: [UnusedApp]?
     @State private var busy: Set<String> = []
@@ -246,6 +251,7 @@ struct UnusedAppsCard: View {
             }
         }
         .task(id: days) {
+            guard !isLayoutProbe else { return }
             apps = nil
             apps = await Cleanup.unusedApps(olderThan: days)
         }
